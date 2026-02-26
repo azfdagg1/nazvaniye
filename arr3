@@ -1,0 +1,66 @@
+<?php
+session_start();
+require_once 'db.php';
+
+// Проверка прав доступа
+$admin_id = $_SESSION['user_id'];
+$check = mysqli_query($connect, "SELECT IsAdmin FROM `users_db` WHERE id = '$admin_id'");
+$admin = mysqli_fetch_assoc($check);
+
+if (!$admin || $admin['IsAdmin'] != 1) {
+    die("У вас нет прав доступа к этой странице.");
+}
+
+// Получаем всех пользователей
+$sql = "SELECT u.id, u.login, u.password, u.email, n.name, n.surname, n.birthday 
+        FROM `users_db` u 
+        LEFT JOIN `names_db` n ON u.id = n.id";
+$result = mysqli_query($connect, $sql);
+?>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Панель управления</title>
+    <style>
+        body { font-family: sans-serif; padding: 30px; background: #f4f7f6; }
+        h2 { color: #333; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+        th { background: #4facfe; color: white; }
+        input { padding: 8px; border: 1px solid #ddd; border-radius: 6px; width: 90%; }
+        .save-btn { background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; }
+        .back-btn { display: inline-block; margin-bottom: 20px; color: #4facfe; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <a href="profile.php" class="back-btn">← Вернуться в мессенджер</a>
+    <h2>Все пользователи системы</h2>
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Логин</th>
+            <th>Пароль</th>
+            <th>Почта</th>
+            <th>Имя</th>
+            <th>Фамилия</th>
+            <th>Дата рожд.</th>
+            <th>Действие</th>
+        </tr>
+        <?php while($row = mysqli_fetch_assoc($result)): ?>
+        <form action="admin_save.php" method="POST">
+            <tr>
+                <td><?php echo $row['id']; ?><input type="hidden" name="id" value="<?php echo $row['id']; ?>"></td>
+                <td><input type="text" name="login" value="<?php echo $row['login']; ?>"></td>
+                <td><input type="text" name="password" value="<?php echo $row['password']; ?>"></td>
+                <td><input type="email" name="email" value="<?php echo $row['email']; ?>"></td>
+                <td><input type="text" name="name" value="<?php echo $row['name']; ?>"></td>
+                <td><input type="text" name="surname" value="<?php echo $row['surname']; ?>"></td>
+                <td><input type="date" name="birthday" value="<?php echo $row['birthday']; ?>"></td>
+                <td><button type="submit" class="save-btn">OK</button></td>
+            </tr>
+        </form>
+        <?php endwhile; ?>
+    </table>
+</body>
+</html>
