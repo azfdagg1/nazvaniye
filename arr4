@@ -1,0 +1,57 @@
+<?php
+session_start();
+require_once 'db.php';
+
+// 1. Проверка прав (только админ может сохранять)
+if (!isset($_SESSION['user_id'])) {
+    die("Авторизуйтесь.");
+}
+
+$admin_id = $_SESSION['user_id'];
+$check_admin = mysqli_query($connect, "SELECT IsAdmin FROM `users_db` WHERE id = '$admin_id'");
+$admin_data = mysqli_fetch_assoc($check_admin);
+
+if (!$admin_data || $admin_data['IsAdmin'] != 1) {
+    die("У вас нет прав администратора.");
+}
+
+// 2. Получение данных из POST
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $target_id = mysqli_real_escape_string($connect, $_POST['id']);
+    $login = mysqli_real_escape_string($connect, $_POST['login']);
+    $password = mysqli_real_escape_string($connect, $_POST['password']);
+    $email = mysqli_real_escape_string($connect, $_POST['email']);
+    $name = mysqli_real_escape_string($connect, $_POST['name']);
+    $surname = mysqli_real_escape_string($connect, $_POST['surname']);
+    $birthday = mysqli_real_escape_string($connect, $_POST['birthday']);
+
+    // 3. Обновляем основные данные (аккаунт)
+    $update_users = "UPDATE `users_db` SET 
+                        `login` = '$login', 
+                        `password` = '$password', 
+                        `email` = '$email' 
+                     WHERE `id` = '$target_id'";
+    
+    // 4. Обновляем личные данные (профиль)
+    // Используем INSERT ... ON DUPLICATE KEY UPDATE на случай, если записи в names_db еще нет
+    $update_names = "INSERT INTO `names_db` (id, name, surname, birthday) 
+                     VALUES ('$target_id', '$name', '$surname', '$birthday')
+                     ON DUPLICATE KEY UPDATE 
+                        `name` = '$name', 
+                        `surname` = '$surname', 
+                        `birthday` = '$birthday'";
+
+    $res1 = mysqli_query($connect, $update_users);
+    $res2 = mysqli_query($connect, $update_names);
+
+    if ($res1 && $res2) {
+        // Возвращаемся обратно в админку с пометкой об успехе
+        header("Location: admin_control.php?status=success");
+        exit();
+    } else {
+        echo "Ошибка при обновлении: " . mysqli_error($connect);
+    }
+} else {
+    header("Location: admin_control.php");
+    exit();
+}
